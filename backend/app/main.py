@@ -6,7 +6,7 @@ import mysql.connector
 from mysql.connector import Error
 from decouple import config
 import os
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -48,6 +48,11 @@ def get_db():
 class UsuarioRegistro(BaseModel):
     nombre: str
     apellido: str
+    email: str
+    contrasena: str
+
+class UsuarioLogin(BaseModel):
+    email: str
     contrasena: str
 
 class PeliculaCreate(BaseModel):
@@ -97,13 +102,13 @@ def registrar_usuario(usuario: UsuarioRegistro):
 
         # 🔍 Verificar si ya existe
         cursor.execute(
-            "SELECT id FROM usuarios WHERE nombre = %s AND apellido = %s",
-            (usuario.nombre, usuario.apellido)
+            "SELECT id FROM usuarios WHERE email = %s",
+            (usuario.email,)
         )
         if cursor.fetchone():
             raise HTTPException(
                 status_code=400,
-                detail="El usuario ya está registrado."
+                detail="El correo ya se encuentra registrado."
             )
 
         # 🔐 Hash con scrypt (sin límite de bcrypt)
@@ -114,8 +119,8 @@ def registrar_usuario(usuario: UsuarioRegistro):
 
         # 💾 Insertar usuario
         cursor.execute(
-            "INSERT INTO usuarios (nombre, apellido, contrasena, rol) VALUES (%s, %s, %s, 'user')",
-            (usuario.nombre, usuario.apellido, hash_pw)
+            "INSERT INTO usuarios (nombre, apellido, email, contrasena, rol) VALUES (%s, %s, %s, %s, 'user')",
+            (usuario.nombre, usuario.apellido, usuario.email, hash_pw)
         )
         conn.commit()
 
@@ -123,6 +128,7 @@ def registrar_usuario(usuario: UsuarioRegistro):
             "id": cursor.lastrowid,
             "nombre": usuario.nombre,
             "apellido": usuario.apellido,
+            "email": usuario.email,
             "rol": "user",
             "mensaje": "Usuario registrado correctamente."
         }
@@ -145,10 +151,49 @@ def get_usuarios():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, nombre, apellido, rol, creado_en FROM usuarios")
+        cursor.execute("SELECT id, nombre, apellido, email, rol, creado_en FROM usuarios")
         return {"usuarios": cursor.fetchall()}
     except Error as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/api/usuarios/login")
+def login_usuario(credenciales: UsuarioLogin):
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Buscar usuario por email
+        cursor.execute(
+            "SELECT id, nombre, apellido, email, contrasena, rol FROM usuarios WHERE email = %s",
+            (credenciales.email,)
+        )
+        user = cursor.fetchone()
+
+        # Si no existe o la contraseña no hace Match con el hash Scrypt
+        if not user or not check_password_hash(user["contrasena"], credenciales.contrasena):
+            raise HTTPException(
+                status_code=401,
+                detail="Correo electrónico o contraseña incorrectos."
+            )
+
+        # Inicio exitoso
+        return {
+            "mensaje": "Inicio de sesión exitoso",
+            "usuario": {
+                "id": user["id"],
+                "nombre": user["nombre"],
+                "apellido": user["apellido"],
+                "email": user["email"],
+                "rol": user["rol"]
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"DB Error: {str(e)}")
     finally:
         cursor.close()
         conn.close()

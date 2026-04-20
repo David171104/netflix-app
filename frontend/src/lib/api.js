@@ -5,6 +5,10 @@
 const BASE_URL = '/api';
 
 // ── Utilidad interna ───────────────────────────────────────────────
+/**
+ * @param {string} endpoint
+ * @param {RequestInit} [options]
+ */
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
 
@@ -27,12 +31,23 @@ async function request(endpoint, options = {}) {
 
 /**
  * Registra un nuevo usuario.
- * @param {{ nombre: string, apellido: string, contrasena: string }} usuario
+ * @param {{ nombre: string, apellido: string, email: string, contrasena: string }} usuario
  */
 export async function registrarUsuario(usuario) {
   return request('/usuarios/registro', {
     method: 'POST',
     body: JSON.stringify(usuario),
+  });
+}
+
+/**
+ * Inicia sesión con un usuario existente.
+ * @param {{ email: string, contrasena: string }} credenciales
+ */
+export async function loginUsuario(credenciales) {
+  return request('/usuarios/login', {
+    method: 'POST',
+    body: JSON.stringify(credenciales),
   });
 }
 
