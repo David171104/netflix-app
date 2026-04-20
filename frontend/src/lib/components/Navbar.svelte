@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
+  import Swal from 'sweetalert2';
 
   let isScrolled = false;
   let menuVisible = false;
@@ -19,12 +20,35 @@
     }
   });
 
-  function cerrarSesion() {
-    // Limpiar cualquier dato de sesión simulado en localStorage/sessionStorage
-    localStorage.removeItem('usuario');
-    sessionStorage.removeItem('usuario');
-    menuVisible = false;
-    goto('/');
+  async function cerrarSesion() {
+    const result = await Swal.fire({
+      title: '¿Quieres cerrar sesión?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#e50914',
+      cancelButtonColor: '#333',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar',
+      background: '#141414',
+      color: '#fff'
+    });
+
+    if (result.isConfirmed) {
+      await Swal.fire({
+        title: '¡Vuelve pronto!',
+        text: 'Las mejores películas te esperan.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#141414',
+        color: '#fff'
+      });
+      // Limpiar cualquier dato de sesión simulado en localStorage/sessionStorage
+      localStorage.removeItem('usuario');
+      sessionStorage.removeItem('usuario');
+      menuVisible = false;
+      goto('/');
+    }
   }
 
   function toggleMenu() {

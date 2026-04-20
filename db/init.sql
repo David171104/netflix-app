@@ -20,10 +20,11 @@ CREATE TABLE IF NOT EXISTS peliculas (
 );
 
 CREATE TABLE IF NOT EXISTS favoritos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT,
     pelicula_id INT,
     agregado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (usuario_id, pelicula_id),
+    UNIQUE(usuario_id, pelicula_id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (pelicula_id) REFERENCES peliculas(id) ON DELETE CASCADE
 );

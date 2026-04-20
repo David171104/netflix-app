@@ -1,6 +1,7 @@
 <script>
   import { goto } from '$app/navigation';
   import { loginUsuario } from '$lib/api';
+  import Swal from 'sweetalert2';
 
   let email = '';
   let password = '';
@@ -19,10 +20,30 @@
     cargando = true;
     
     try {
-      await loginUsuario({ email, contrasena: password });
+      const res = await loginUsuario({ email, contrasena: password });
+      localStorage.setItem('usuario', JSON.stringify(res.usuario));
+      
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Bienvenido!',
+        text: 'Has iniciado sesión correctamente.',
+        background: '#333',
+        color: '#fff',
+        confirmButtonColor: '#e50914',
+        timer: 2000,
+        showConfirmButton: false
+      });
       goto('/browse');
     } catch (err) {
       error = err instanceof Error ? err.message : 'Error al iniciar sesión';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de inicio de sesión',
+        text: error,
+        background: '#333',
+        color: '#fff',
+        confirmButtonColor: '#e50914'
+      });
     } finally {
       cargando = false;
     }
@@ -110,7 +131,10 @@
             <input type="checkbox" id="rememberMe" checked />
             <label for="rememberMe" class="checkbox-label">Recuérdame</label>
           </div>
-          <a href="#help" class="help-link">¿Necesitas ayuda?</a>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+            <a href="/signup" class="help-link">¿Olvidaste tu contraseña? Regístrate</a>
+            <a href="#help" class="help-link">¿Necesitas ayuda?</a>
+          </div>
         </div>
       </form>
 

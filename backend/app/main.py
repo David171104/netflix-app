@@ -293,15 +293,27 @@ def agregar_favorito(favorito: FavoritoCreate):
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Check if already exists
         cursor.execute(
-            "INSERT INTO favoritos (usuario_id, pelicula_id) VALUES (%s, %s)",
+            "SELECT id FROM favoritos WHERE usuario_id = %s AND pelicula_id = %s",
             (favorito.usuario_id, favorito.pelicula_id)
         )
-        conn.commit()
-        return {"mensaje": "Película agregada a favoritos."}
+        existing = cursor.fetchone()
+
+        if existing:
+            # Eliminar (Toggle OFF)
+            cursor.execute("DELETE FROM favoritos WHERE id = %s", (existing[0],))
+            conn.commit()
+            return {"mensaje": "Película eliminada de favoritos.", "estado": "removido"}
+        else:
+            # Insertar (Toggle ON)
+            cursor.execute(
+                "INSERT INTO favoritos (usuario_id, pelicula_id) VALUES (%s, %s)",
+                (favorito.usuario_id, favorito.pelicula_id)
+            )
+            conn.commit()
+            return {"mensaje": "Película agregada a favoritos.", "estado": "agregado"}
     except Error as e:
-        if e.errno == 1062:
-            raise HTTPException(status_code=400, detail="Ya está en favoritos.")
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:

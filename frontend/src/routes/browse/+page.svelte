@@ -5,11 +5,13 @@
   import MovieModal from '$lib/components/MovieModal.svelte';
 
   import { onMount } from 'svelte';
-  import { getPeliculas } from '$lib/api.js';
+  import { getPeliculas, getFavoritos } from '$lib/api.js';
 
   // Reactividad: Las filas inician vacías y se llenan en caliente
   /** @type {Array<{id: number, title: string, image: string, description?: string, cast?: string}>} */
   let peliculasList = [];
+  let miLista = [];
+  let favoritosIds = [];
   let selectedMovie = null;
 
   function openModal(movie) {
@@ -18,6 +20,29 @@
 
   function closeModal() {
     selectedMovie = null;
+  }
+
+  async function loadFavorites(userId) {
+    const favData = await getFavoritos(userId);
+    if (favData && favData.favoritos) {
+      favoritosIds = favData.favoritos.map(f => f.id);
+      miLista = favData.favoritos.map(p => ({
+        id: p.id,
+        title: p.titulo,
+        image: p.imagen,
+        description: p.descripcion,
+        cast: p.reparto
+      }));
+    }
+  }
+
+  async function handleFavToggle(e) {
+    // Cuando cambia un favorito, recargamos la lista desde el backend para estar sincronizados
+    const userStr = localStorage.getItem('usuario');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      await loadFavorites(user.id);
+    }
   }
 
   onMount(async () => {
@@ -34,8 +59,14 @@
           cast: p.reparto
         })
       );
+      
+      const userStr = localStorage.getItem('usuario');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        await loadFavorites(user.id);
+      }
     } catch (e) {
-      console.error("Error al obtener películas:", e);
+      console.error("Error al obtener datos:", e);
     }
   });
 
@@ -61,10 +92,14 @@
   />
 
   <div class="rows-section">
-    <Row title="Tendencias de hoy" movies={peliculasList} on:selectMovie={(e) => openModal(e.detail)} />
-    <Row title="Series Top Mundiales" movies={[...peliculasList].reverse()} on:selectMovie={(e) => openModal(e.detail)} />
-    <Row title="Películas Aclamadas" movies={peliculasList} on:selectMovie={(e) => openModal(e.detail)} />
-    <Row title="Sci-Fi para el Fin de Semana" movies={[...peliculasList].reverse()} on:selectMovie={(e) => openModal(e.detail)} />
+    <div id="milista" style="scroll-margin-top: 80px;"></div>
+    {#if miLista.length > 0}
+      <Row title="Mi Lista" movies={miLista} {favoritosIds} on:selectMovie={(e) => openModal(e.detail)} on:favToggled={handleFavToggle} />
+    {/if}
+    <Row title="Tendencias de hoy" movies={peliculasList} {favoritosIds} on:selectMovie={(e) => openModal(e.detail)} on:favToggled={handleFavToggle} />
+    <Row title="Series Top Mundiales" movies={[...peliculasList].reverse()} {favoritosIds} on:selectMovie={(e) => openModal(e.detail)} on:favToggled={handleFavToggle} />
+    <Row title="Películas Aclamadas" movies={peliculasList} {favoritosIds} on:selectMovie={(e) => openModal(e.detail)} on:favToggled={handleFavToggle} />
+    <Row title="Sci-Fi para el Fin de Semana" movies={[...peliculasList].reverse()} {favoritosIds} on:selectMovie={(e) => openModal(e.detail)} on:favToggled={handleFavToggle} />
   </div>
 
   {#if selectedMovie}
@@ -93,5 +128,9 @@
     position: relative;
     z-index: 10;
     padding-bottom: 2rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 </style>

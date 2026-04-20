@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { registrarUsuario } from '$lib/api';
+  import Swal from 'sweetalert2';
 
   let nombre = '';
   let apellido = '';
@@ -39,10 +40,27 @@
     cargando = true;
     try {
       await registrarUsuario({ nombre, apellido, email, contrasena });
-      exito = true;
-      setTimeout(() => goto('/login'), 2500);
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Cuenta creada!',
+        text: 'Tu cuenta ha sido creada exitosamente. Redirigiendo...',
+        background: '#333',
+        color: '#fff',
+        confirmButtonColor: '#e50914',
+        timer: 2500,
+        showConfirmButton: false
+      });
+      goto('/login');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Error desconocido';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de registro',
+        text: error,
+        background: '#333',
+        color: '#fff',
+        confirmButtonColor: '#e50914'
+      });
     } finally {
       cargando = false;
     }
